@@ -153,7 +153,7 @@
 
       // Find matches
       if (calEventID != nil) {
-          theEvent = (EKEvent *)[self.eventStore calendarItemWithIdentifier:calEventID];
+          theEvent = [self.eventStore calendarItemWithIdentifier:calEventID];
       }
 
     if (theEvent == nil) {
@@ -411,50 +411,7 @@
     }
 
     if (event.recurrenceRules != nil) {
-      for (EKRecurrenceRule *rule in event.recurrenceRules) {
-        NSMutableDictionary *rrule = [[NSMutableDictionary alloc] initWithObjectsAndKeys:
-            rule.calendarIdentifier, @"calendar", nil];
-
-        switch (rule.frequency) {
-          case EKRecurrenceFrequencyDaily:
-              [rrule setObject:@"daily" forKey:@"freq"];
-          break;
-
-          case EKRecurrenceFrequencyWeekly:
-              [rrule setObject:@"weekly" forKey:@"freq"];
-          break;
-
-          case EKRecurrenceFrequencyMonthly:
-              [rrule setObject:@"monthly" forKey:@"freq"];
-          break;
-
-          case EKRecurrenceFrequencyYearly:
-              [rrule setObject:@"yearly" forKey:@"freq"];
-          break;
-
-          default:
-              [rrule setObject:@"none" forKey:@"freq"];
-          break;
-        }
-
-        NSNumber *interval = [NSNumber numberWithInteger: rule.interval];
-        [rrule setObject:interval forKey:@"interval"];
-
-      if (rule.recurrenceEnd != nil) {
-        NSMutableDictionary *until = [[NSMutableDictionary alloc] init];
-
-        if (rule.recurrenceEnd.endDate != nil) {
-          [until setObject:[df stringFromDate:rule.recurrenceEnd.endDate] forKey:@"date"];
-        }
-
-      NSNumber *count = [NSNumber numberWithInteger: rule.recurrenceEnd.occurrenceCount];
-      [until setObject:count forKey:@"count"];
-
-        [rrule setObject:until forKey:@"until"];
-      }
-
-        [entry setObject:rrule forKey:@"rrule"];
-      }
+//      [entry setObject:event.recurrenceRules forKey:@"rrule"];
     }
 
     [entry setObject:event.calendarItemIdentifier forKey:@"id"];
@@ -751,10 +708,35 @@
   EKCalendar* calendar = [self findEKCalendar:calendarName];
   CDVPluginResult *pluginResult = nil;
 
+            // start by retrieving day, weekday, month and year components for yourDate
+    NSDate *yourDate= [NSDate date];;
+    NSCalendar *gregorian = [[NSCalendar alloc] initWithCalendarIdentifier:NSCalendarIdentifierGregorian];
+    NSDateComponents *todayComponents = [gregorian components:(NSCalendarUnitDay | NSCalendarUnitMonth | NSCalendarUnitYear) fromDate:yourDate];
+    NSInteger theDay = [todayComponents day];
+    NSInteger theMonth = [todayComponents month];
+    NSInteger theYear = [todayComponents year];
+
+    // now build a NSDate object for yourDate using these components
+    NSDateComponents *components = [[NSDateComponents alloc] init];
+    [components setDay:theDay];
+    [components setMonth:theMonth];
+    [components setYear:theYear];
+    NSDate *thisDate = [gregorian dateFromComponents:components];
+    //[components release];
+
+    // now build a NSDate object for the next day
+    NSDateComponents *offsetComponents = [[NSDateComponents alloc] init];
+    [offsetComponents setDay:2];
+    NSDate *nextDate = [gregorian dateByAddingComponents:offsetComponents toDate:thisDate options:0];
+    //[offsetComponents release];
+    //[gregorian release];
+    NSLog(@"The date is %@.", nextDate);
+
   if (calendar == nil) {
     pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_ERROR messageAsString:@"Could not find calendar"];
   } else {
-    NSDate* endDate =  [NSDate dateWithTimeIntervalSinceNow:[[NSDate distantFuture] timeIntervalSinceReferenceDate]];
+//    NSDate* endDate =  [NSDate dateWithTimeIntervalSinceNow:[[NSDate distantFuture] timeIntervalSinceReferenceDate]];
+    NSDate* endDate = nextDate;
     NSArray *calendarArray = [NSArray arrayWithObject:calendar];
     NSPredicate *fetchCalendarEvents = [eventStore predicateForEventsWithStartDate:[NSDate date] endDate:endDate calendars:calendarArray];
     NSArray *matchingEvents = [eventStore eventsMatchingPredicate:fetchCalendarEvents];
@@ -818,7 +800,7 @@
     }
 
     // Find matches
-    EKCalendarItem *theEvent = nil;
+    EKCalendarItem *theEvent;
     if (calEventID != nil) {
       theEvent = [self.eventStore calendarItemWithIdentifier:calEventID];
     }
